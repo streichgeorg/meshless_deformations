@@ -1,0 +1,14 @@
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/CMakeFiles/edit_cache.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/CMakeFiles/rebuild_cache.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/CMakeFiles/a2-mass-spring-3d.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/glad/CMakeFiles/rebuild_cache.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/glad/CMakeFiles/edit_cache.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/glad/CMakeFiles/glad.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/glfw/CMakeFiles/rebuild_cache.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/glfw/CMakeFiles/edit_cache.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/glfw/src/CMakeFiles/rebuild_cache.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/glfw/src/CMakeFiles/edit_cache.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/glfw/src/CMakeFiles/glfw.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/imgui/CMakeFiles/rebuild_cache.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/imgui/CMakeFiles/edit_cache.dir
+/home/streichg/eth_projects/phanim/CSC417-a2-mass-spring-3d/build/imgui/CMakeFiles/imgui.dir
