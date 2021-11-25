@@ -1,0 +1,9 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/out/build/x64-Debug/CMakeFiles/3.20.21032501-MSVC_2/CompilerIdC
+/out/build/x64-Debug/CMakeFiles
+/out/build/x64-Debug/.cmake/api/v1/query/client-MicrosoftVS
+/out/build/x64-Debug
