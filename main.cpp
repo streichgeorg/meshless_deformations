@@ -8,38 +8,95 @@
 #include <igl/boundary_facets.h>
 #include <Eigen/Dense>
 #include <EigenTypes.h>
+#include <Eigen/Eigenvalues>
 
 #include <init_state.h>
 
 using namespace Eigen;
 
-void goal_minimization(
+double alpha = 0.5;
 
-) {
-
-}
-
-VectorXd q;
-VectorXd qdot;
+double dt = 1e-2;
 
 MatrixXd V; //vertices of simulation mesh
 MatrixXi T; //faces of simulation mesh
 MatrixXi F; //faces of simulation mesh
 
+VectorXd x;
+VectorXd xdot;
+
+VectorXd Xbar;
+
+Vector3d C;
+VectorXd m;
+
+void polar_rotation(Matrix3d &R, const Matrix3d &A) {
+    EigenSolver<Matrix3d> es(A.transpose() * A);
+
+    Matrix3d D = es.eigenvalues().asDiagonal();
+    Matrix3d P = es.eigenvectors();
+
+    Matrix3d S = P * S.cwiseSqrt() * P.transpose();
+    R = S.lu().solve(A);
+}
+
+void center_of_mass(Vector3d &r, const VectorXd &x, const VectorXd &m) {
+    int n = x.size() / 3;
+
+    r.setZero();
+    for (int i = 0; i < n; i++) r += m(i) * x.segment<3>(3 * i);
+    r /= m.sum();
+}
+
+void goal_minimization(
+    Matrix3d &R, Vector3d &c,
+    const VectorXd &Xbar, const VectorXd &x, const VectorXd &m
+) {
+    center_of_mass(c, x, m);
+
+    Matrix3d Arot;
+
+    int n = Vbar.rows();
+
+    for (int i = 0; i < n; i++) {
+        Arot += m(i) * (x.segment<3>(3 * i) - c) * Xbar.segment<3>(3 * i).transpose();
+    }
+
+    polar_rotation(R, Arot);
+}
+
 bool simulating = true;
 
 void simulate() {
+    int n = Xbar.rows() / 3;
+
     while(simulating) {
-        std::cout << "simulating" << std::endl;
-        q *= 1 + 1e-5;
+        MatrixXd R;
+        Vector3d c;
+        goal_minimization(R, c, Xbar, x, m);
+
+        MatrixXd G = R * Map<MatrixXd>(Xbar.data(), 3, n);
+        G.colwise() += c;
+
+        VectorXd g = Map<VectorXd>(G.data(), 3 * n);
+
+        VectorXd f_def = alpha * (g - x);
+
+        xdot += f_def / dt;
+        x += dt * xdot;
     }
 }
 
 bool draw(igl::opengl::glfw::Viewer & viewer) {
 
-    Visualize::update_vertex_positions(0, q);
+    Visualize::update_vertex_positions(0, x);
 
     return false;
+}
+
+void flatten(VectorXd &x, const MatrixXd &V) {
+    MatrixXd VT = V.transpose();
+    x = Map<VectorXd>(VT, VT.rows() * VT.cols());
 }
 
 int main(int argc, char **argv) {
@@ -51,7 +108,14 @@ int main(int argc, char **argv) {
     igl::boundary_facets(T, F);
     F = F.rowwise().reverse().eval();
 
-    init_state(q, qdot, V);
+    flatten(x, V);
+
+    m = VectorXd::Constant(V.rows(), M_PI);
+
+    Vector3d C;
+    center_of_mass(C, x, m);
+
+    flatten(Xbar, V.rowwise() - C):
 
     std::thread simulation_thread(simulate);
     simulation_thread.detach();
