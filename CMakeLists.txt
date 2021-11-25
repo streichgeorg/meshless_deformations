@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.2)
 
-project(a2-mass-spring-3d)
+project(meshless-deformations)
 
 #Important CMAKE stuff
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
