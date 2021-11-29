@@ -16,7 +16,7 @@ using namespace Eigen;
 
 double alpha = 0.5;
 
-double dt = 1e-2;
+double dt = 1e-4;
 
 MatrixXd V; //vertices of simulation mesh
 MatrixXi T; //faces of simulation mesh
@@ -69,7 +69,7 @@ bool simulating = true;
 void simulate() {
     int n = Xbar.rows() / 3;
 
-    while(simulating) {
+    for(int i = 0; ; i++) {
         Matrix3d R;
         Vector3d c;
         goal_minimization(R, c, Xbar, x, m);
@@ -77,15 +77,10 @@ void simulate() {
         MatrixXd G = R * Map<MatrixXd>(Xbar.data(), 3, n);
         G.colwise() += c;
 
-        if (G.array().hasNaN()) exit(-1);
-
         VectorXd g = Map<VectorXd>(G.data(), 3 * n);
         VectorXd f_def = alpha * (g - x);
 
-        std::cout << "f_def:" << std::endl;
-        std::cout << f_def << std::endl;
-
-        xdot = f_def / dt;
+        xdot += f_def / dt;
         x += dt * xdot;
     }
 }
@@ -106,8 +101,8 @@ int main(int argc, char **argv) {
 
     std::cout<<"Start Our Project\n";
 
-    //load geometric data
-    igl::readMESH("../data/coarse_bunny.mesh", V, T, F);
+    // load geometric data
+    igl::readMESH("../data/cube.mesh", V, T, F);
     igl::boundary_facets(T, F);
     F = F.rowwise().reverse().eval();
 
