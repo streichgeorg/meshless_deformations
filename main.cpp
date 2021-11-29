@@ -27,16 +27,15 @@ VectorXd xdot;
 
 VectorXd Xbar;
 
-Vector3d C;
 VectorXd m;
 
 void polar_rotation(Matrix3d &R, const Matrix3d &A) {
-    EigenSolver<Matrix3d> es(A.transpose() * A);
+    SelfAdjointEigenSolver<Matrix3d> es(A.transpose() * A);
 
     Matrix3d D = es.eigenvalues().asDiagonal();
     Matrix3d P = es.eigenvectors();
 
-    Matrix3d S = P * S.cwiseSqrt() * P.transpose();
+    Matrix3d S = P * D.cwiseSqrt() * P.transpose();
     R = S.lu().solve(A);
 }
 
@@ -56,7 +55,7 @@ void goal_minimization(
 
     Matrix3d Arot;
 
-    int n = Vbar.rows();
+    int n = Xbar.rows() / 3;
 
     for (int i = 0; i < n; i++) {
         Arot += m(i) * (x.segment<3>(3 * i) - c) * Xbar.segment<3>(3 * i).transpose();
@@ -71,18 +70,22 @@ void simulate() {
     int n = Xbar.rows() / 3;
 
     while(simulating) {
-        MatrixXd R;
+        Matrix3d R;
         Vector3d c;
         goal_minimization(R, c, Xbar, x, m);
 
         MatrixXd G = R * Map<MatrixXd>(Xbar.data(), 3, n);
         G.colwise() += c;
 
-        VectorXd g = Map<VectorXd>(G.data(), 3 * n);
+        if (G.array().hasNaN()) exit(-1);
 
+        VectorXd g = Map<VectorXd>(G.data(), 3 * n);
         VectorXd f_def = alpha * (g - x);
 
-        xdot += f_def / dt;
+        std::cout << "f_def:" << std::endl;
+        std::cout << f_def << std::endl;
+
+        xdot = f_def / dt;
         x += dt * xdot;
     }
 }
@@ -96,7 +99,7 @@ bool draw(igl::opengl::glfw::Viewer & viewer) {
 
 void flatten(VectorXd &x, const MatrixXd &V) {
     MatrixXd VT = V.transpose();
-    x = Map<VectorXd>(VT, VT.rows() * VT.cols());
+    x = Map<VectorXd>(VT.data(), VT.rows() * VT.cols());
 }
 
 int main(int argc, char **argv) {
@@ -108,14 +111,17 @@ int main(int argc, char **argv) {
     igl::boundary_facets(T, F);
     F = F.rowwise().reverse().eval();
 
-    flatten(x, V);
-
     m = VectorXd::Constant(V.rows(), M_PI);
 
-    Vector3d C;
-    center_of_mass(C, x, m);
+    flatten(Xbar, V);
 
-    flatten(Xbar, V.rowwise() - C):
+    Vector3d C;
+    center_of_mass(C, Xbar, m);
+
+    flatten(Xbar, V.rowwise() - C.transpose());
+
+    flatten(x, V);
+    xdot = VectorXd::Zero(x.size());
 
     std::thread simulation_thread(simulate);
     simulation_thread.detach();
