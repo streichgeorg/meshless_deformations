@@ -1,37 +1,37 @@
-#include <visualization.h> 
+#include <visualization.h>
 
 //libigl viewer
 namespace Visualize {
 
     igl::opengl::glfw::Viewer g_viewer;
     igl::opengl::glfw::imgui::ImGuiMenu menu;
-    
-    //meshes in the scene 
-    std::vector<std::pair<Eigen::MatrixXd, Eigen::MatrixXi> > g_geometry;
-    std::vector<unsigned int> g_id; //id into libigl for these meshes 
 
-    //picking variables 
-    std::vector<unsigned int > g_picked_vertices;  
-    unsigned int g_selected_obj; 
-    
-    //cache for phase space data 
+    //meshes in the scene
+    std::vector<std::pair<Eigen::MatrixXd, Eigen::MatrixXi> > g_geometry;
+    std::vector<unsigned int> g_id; //id into libigl for these meshes
+
+    //picking variables
+    std::vector<unsigned int > g_picked_vertices;
+    unsigned int g_selected_obj;
+
+    //cache for phase space data
     std::deque<std::pair<float, float> > g_state;
     std::deque<std::array<float, 4> > g_energy; //time, kinetic energy, potential energy
 
     //mouse UI state variables
     bool g_mouse_dragging = false;
     Eigen::Vector3d g_mouse_win; //mouse window coordinates
-    Eigen::Vector3d g_mouse_drag; //last mouse drag vector 
-    Eigen::Vector3d g_mouse_world; 
-    Eigen::Vector3d g_mouse_drag_world; //mouse drag delta in the world space 
+    Eigen::Vector3d g_mouse_drag; //last mouse drag vector
+    Eigen::Vector3d g_mouse_world;
+    Eigen::Vector3d g_mouse_drag_world; //mouse drag delta in the world space
 
 }
 
 igl::opengl::glfw::Viewer & Visualize::viewer() { return g_viewer; }
 
 bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_dot_bounds, const Eigen::VectorXd &q, const Eigen::VectorXd &q_dot) {
-        
-        using namespace ImGui; 
+
+        using namespace ImGui;
 
         unsigned int cache_size = 10000;
         unsigned int num_lines = 5; //always odd number because I want lines to cross at 0,0
@@ -43,7 +43,7 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
             g_state.pop_front();
         }
 
-        //update plotting cache 
+        //update plotting cache
         g_state.push_back(std::make_pair(q(0), q_dot(0)));
 
         //ImGUI stuff that I don't understand (taken from code example here: https://github.com/ocornut/imgui/issues/786)
@@ -51,7 +51,7 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
         const ImGuiIO& IO = GetIO();
         ImDrawList* DrawList = GetWindowDrawList();
         ImGuiWindow* Window = GetCurrentWindow();
-        
+
         if (Window->SkipItems)
             return false;
 
@@ -67,34 +67,34 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
         ImRect bb(Window->DC.CursorPos, Window->DC.CursorPos + Canvas);
 
         const ImGuiID id = Window->GetID(label);
-        
+
         RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg, 1), true, Style.FrameRounding);
-        
+
         //local grid coordinates are -1,1 in both directions
         auto pix_to_normalized =  [&bb, &Canvas](ImVec2 pix) {  return ImVec2((pix.x-bb.Min.x)/Canvas.x,(pix.y-bb.Min.y)/Canvas.y); };
         auto normalized_to_pix =  [&bb, &Canvas] (ImVec2 norm) {  return ImVec2(norm.x*Canvas.x + bb.Min.x, norm.y*Canvas.y + bb.Min.y); };
         auto data_to_normalized =  [&q_bounds, &q_dot_bounds] (ImVec2 state) {  return ImVec2((state.x - q_bounds.x)/(q_bounds.y - q_bounds.x), (state.y - q_dot_bounds.x)/(q_dot_bounds.y - q_dot_bounds.x)); };
-        
+
         //background grid centered on origin
         for (float i = 0.f; i <= 1.f; i+= 1.f/static_cast<float>(num_lines-1)) {
             DrawList->AddLine(
                 normalized_to_pix(ImVec2(i, 0.f)),
                 normalized_to_pix(ImVec2(i, 1.f)),
                 GetColorU32(ImGuiCol_TextDisabled), 1.2);
-        }   
-        
+        }
+
         for (float i = 0.f; i <= 1.f; i+= 1.f/static_cast<float>(num_lines-1)) {
             DrawList->AddLine(
                 normalized_to_pix(ImVec2(0.f, i)),
                 normalized_to_pix(ImVec2(1.f, i)),
                 GetColorU32(ImGuiCol_TextDisabled), 1.2);
-        }  
+        }
 
         //plot phase space trajectory
         bool clip_p1;
         bool clip_p2;
         for(unsigned int i=0; i<g_state.size()-1; ++i) {
-            
+
             clip_p1 = false;
             clip_p2 = false;
 
@@ -123,7 +123,7 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
             //std::cout<<data_to_normalized(ImVec2(g_state[i].first, g_state[i].second)).x<<"\n";
         }
 
-        //label axes 
+        //label axes
 
         return true;
 
@@ -131,7 +131,7 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
 
     void Visualize::add_energy(float t, float T, float V) {
 
-        //update plotting cache 
+        //update plotting cache
         std::array<float,4> tmp;
         tmp[0] = t;
         tmp[1] = T;
@@ -143,7 +143,7 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
     }
 
     bool Visualize::plot_energy(const char *label, unsigned int type, ImVec2 t_bounds, ImVec2 E_bounds, ImU32 plot_col) {
-        using namespace ImGui; 
+        using namespace ImGui;
 
         unsigned int num_lines = 3; //always odd number because I want lines to cross at 0,0
 
@@ -155,7 +155,7 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
         const ImGuiIO& IO = GetIO();
         ImDrawList* DrawList = GetWindowDrawList();
         ImGuiWindow* Window = GetCurrentWindow();
-    
+
         if (Window->SkipItems)
             return false;
 
@@ -170,23 +170,23 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
         ImRect bb(Window->DC.CursorPos, Window->DC.CursorPos + Canvas);
         ItemSize(bb);
         const ImGuiID id = Window->GetID(label);
-        
+
         RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg, 1), true, Style.FrameRounding);
-        
+
         //local grid coordinates are -1,1 in both directions
         auto pix_to_normalized =  [&bb, &Canvas](ImVec2 pix) {  return ImVec2((pix.x-bb.Min.x)/Canvas.x,(pix.y-bb.Min.y)/Canvas.y); };
         auto normalized_to_pix =  [&bb, &Canvas] (ImVec2 norm) {  return ImVec2(norm.x*Canvas.x + bb.Min.x, Canvas.y - norm.y*Canvas.y + bb.Min.y); };
         auto data_to_normalized =  [&] (ImVec2 state) {  return ImVec2((state.x - g_energy[0][0])/(t_bounds.y), (state.y - E_bounds.x)/(E_bounds.y - E_bounds.x)); };
-        
+
         DrawList->AddText(bb.Min, GetColorU32(ImGuiCol_Text), label);
 
-        //background grid centered on origin        
+        //background grid centered on origin
         for (float i = 0.f; i <= 1.f; i+= 1.f/static_cast<float>(num_lines-1)) {
             DrawList->AddLine(
                 normalized_to_pix(ImVec2(0.f, i)),
                 normalized_to_pix(ImVec2(1.f, i)),
                 GetColorU32(ImGuiCol_TextDisabled), 1.2);
-        }  
+        }
 
         //plot energy
         if(g_energy.size() == 0)
@@ -197,7 +197,7 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
         }
 
         for(unsigned int ei=type; ei <= type; ++ei) {
-            
+
             bool clip_p1;
             bool clip_p2;
             for(unsigned int i=0; i<g_energy.size()-1; ++i) {
@@ -229,7 +229,7 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
                 //std::cout<<data_to_normalized(ImVec2(g_state[i].first, g_state[i].second)).x<<"\n";
             }
         }
-        //label axes 
+        //label axes
 
         return true;
     }
@@ -329,7 +329,7 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
 
         //add mesh to libigl and store id for access later
         if(g_geometry.size() == 0) {
-            g_id.push_back(0);     
+            g_id.push_back(0);
         } else {
             g_id.push_back(g_viewer.append_mesh());
         }
@@ -343,8 +343,8 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
     }
 
     void Visualize::rigid_transform_1d(unsigned int id, double x) {
-        
-        //reset vertex positions 
+
+        //reset vertex positions
         for(unsigned int ii=0; ii<g_geometry[id].first.rows(); ++ii) {
             g_viewer.data_list[g_id[id]].V(ii,0) = g_geometry[id].first(ii,0) + x;
          }
@@ -354,8 +354,8 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
     }
 
     void Visualize::scale_x(unsigned int id, double x) {
-        
-        //reset vertex positions 
+
+        //reset vertex positions
         for(unsigned int ii=0; ii<g_geometry[id].first.rows(); ++ii) {
             g_viewer.data_list[g_id[id]].V(ii,0) = x*g_geometry[id].first(ii,0);
          }
@@ -379,9 +379,9 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
     const std::vector<unsigned int> & Visualize::picked_vertices() {
         return g_picked_vertices;
     }
-    
+
     bool Visualize::mouse_down(igl::opengl::glfw::Viewer &viewer, int x, int y) {
-        
+
         g_mouse_win = Eigen::Vector3d(g_viewer.current_mouse_x,viewer.core().viewport(3) - g_viewer.current_mouse_y,0.);
         igl::unproject(
                 g_mouse_win,
@@ -391,18 +391,18 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
                 g_mouse_world);
 
         //if you click on the mesh select the vertex, otherwise do nothing
-        if(pick_nearest_vertices(g_picked_vertices, g_mouse_win, 
+        if(pick_nearest_vertices(g_picked_vertices, g_mouse_win,
                                  g_viewer.core().view, g_viewer.core().proj, g_viewer.core().viewport,
-                                 g_viewer.data().V, g_geometry[0].second, 0.1)) {
+                                 g_viewer.data().V, g_geometry[0].second, 30.0)) {
 
             g_selected_obj = 0;
-            g_mouse_dragging = true; 
-            
+            g_mouse_dragging = true;
+
         }
-        
+
         return false;
     }
-    
+
     bool Visualize::mouse_up(igl::opengl::glfw::Viewer &viewer, int x, int y) {
 
         g_mouse_dragging = false;
@@ -410,7 +410,7 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
         g_mouse_drag_world.setZero();
         return false;
     }
-    
+
     const Eigen::Vector3d & Visualize::mouse_world() {
         return g_mouse_world;
     }
@@ -430,8 +430,8 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
                 g_viewer.core().proj,
                  g_viewer.core().viewport,
                 g_mouse_drag_world);
-        
-    
+
+
         g_mouse_drag_world -= g_mouse_world;
 
         //std::cout<<"Test: "<<g_mouse_drag_world.transpose()<<"\n";
@@ -441,12 +441,12 @@ bool Visualize::plot_phase_space(const char *label, ImVec2 q_bounds, ImVec2 q_do
                 g_viewer.core().proj,
                  g_viewer.core().viewport,
                 g_mouse_world);
-        
+
 
         if(g_mouse_dragging && g_picked_vertices.size() > 0 ) {
             return true;
-        } 
-        
+        }
+
         return false;
     }
 
