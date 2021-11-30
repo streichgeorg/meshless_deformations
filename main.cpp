@@ -14,9 +14,8 @@
 
 using namespace Eigen;
 
-double alpha = 0.5;
-
-double dt = 1e-4;
+double dt = 1e-3;
+double alpha = 1e-2 * dt;
 
 MatrixXd V; //vertices of simulation mesh
 MatrixXi T; //faces of simulation mesh
@@ -53,7 +52,7 @@ void goal_minimization(
 ) {
     center_of_mass(c, x, m);
 
-    Matrix3d Arot;
+    Matrix3d Arot = Matrix3d::Zero();
 
     int n = Xbar.rows() / 3;
 
@@ -116,6 +115,7 @@ int main(int argc, char **argv) {
     flatten(Xbar, V.rowwise() - C.transpose());
 
     flatten(x, V);
+    x.head<3>() = 1.05 * (x.head<3>() - C) + C;
     xdot = VectorXd::Zero(x.size());
 
     std::thread simulation_thread(simulate);
