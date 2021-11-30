@@ -14,8 +14,8 @@
 
 using namespace Eigen;
 
-double dt = 1e-3;
-double alpha = 1e-2 * dt;
+double dt = 1e-4;
+double alpha = 1e-3 * dt;
 
 MatrixXd V; //vertices of simulation mesh
 MatrixXi T; //faces of simulation mesh
@@ -35,7 +35,7 @@ void polar_rotation(Matrix3d &R, const Matrix3d &A) {
     Matrix3d P = es.eigenvectors();
 
     Matrix3d S = P * D.cwiseSqrt() * P.transpose();
-    R = S.lu().solve(A);
+    R = A * S.inverse();
 }
 
 void center_of_mass(Vector3d &r, const VectorXd &x, const VectorXd &m) {
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
     std::cout<<"Start Our Project\n";
 
     // load geometric data
-    igl::readMESH("../data/cube.mesh", V, T, F);
+    igl::readMESH("../data/coarse_bunny.mesh", V, T, F);
     igl::boundary_facets(T, F);
     F = F.rowwise().reverse().eval();
 
@@ -115,7 +115,9 @@ int main(int argc, char **argv) {
     flatten(Xbar, V.rowwise() - C.transpose());
 
     flatten(x, V);
-    x.head<3>() = 1.05 * (x.head<3>() - C) + C;
+    x.segment<3>(F(0, 0)) = 1.2 * (x.segment<3>(F(0, 0)) - C) + C;
+    x.segment<3>(F(4, 0)) = 0.8 * (x.segment<3>(F(4, 0)) - C) + C;
+    x.segment<3>(F(10, 0)) = 0.8 * (x.segment<3>(F(10, 0)) - C) + C;
     xdot = VectorXd::Zero(x.size());
 
     std::thread simulation_thread(simulate);
