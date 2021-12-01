@@ -16,7 +16,8 @@
 using namespace Eigen;
 
 double dt = 1e-4;
-double alpha = 1;
+double alpha = 5e-1;
+double beta = 0.9;
 
 double k_selected = 1e7;
 
@@ -44,26 +45,59 @@ void polar_rotation(Matrix3d &R, const Matrix3d &A) {
 void center_of_mass(Vector3d &r, const VectorXd &x, const VectorXd &m) {
     int n = x.size() / 3;
 
+    assert(m.size() == n);
+
     r.setZero();
     for (int i = 0; i < n; i++) r += m(i) * x.segment<3>(3 * i);
     r /= m.sum();
 }
 
 void goal_minimization(
-    Matrix3d &R, Vector3d &c,
-    const VectorXd &Xbar, const VectorXd &x, const VectorXd &m
+    VectorXd &g,
+    const VectorXd &Xbar, const VectorXd &x, const VectorXd &m,
+    bool quadratic
 ) {
-    center_of_mass(c, x, m);
-
-    Matrix3d Arot = Matrix3d::Zero();
-
     int n = Xbar.rows() / 3;
 
+    Vector3d C;
+    center_of_mass(C, Xbar, m);
+
+    ArrayXXd Xbarr = (Map<const MatrixXd>(Xbar.data(), 3, n).colwise() - C).array();
+
+    MatrixXd Z(9, n);
+    Z << Xbarr,
+         Xbarr.pow(2),
+         Xbarr.row(0) * Xbarr.row(1), Xbarr.row(1) * Xbarr.row(2), Xbarr.row(0) * Xbarr.row(2);
+
+    Vector3d c;
+    center_of_mass(c, x, m);
+
+    Matrix<double, 3, 9> A_rot = Matrix<double, 3, 9>::Zero();
     for (int i = 0; i < n; i++) {
-        Arot += m(i) * (x.segment<3>(3 * i) - c) * Xbar.segment<3>(3 * i).transpose();
+        A_rot += m(i) * (x.segment<3>(3 * i) - c) * Z.col(i).transpose();
     }
 
-    polar_rotation(R, Arot);
+    Matrix3d R;
+    polar_rotation(R, A_rot.leftCols<3>());
+
+    Matrix<double, 3, 9> R_ = Matrix<double, 3, 9>::Zero();
+    R_.leftCols<3>() = R;
+
+    Matrix<double, 9, 9> A_sc_inv = Matrix<double, 9, 9>::Zero();
+    for (int i = 0; i < n; i++) {
+        A_sc_inv += m(i) * Z.col(i) * Z.col(i).transpose();
+    }
+
+    Matrix<double, 3, 9> A = A_rot * A_sc_inv.inverse();
+
+    Matrix<double, 3, 9> T;
+    if (quadratic) T = beta * A + (1 - beta) * R_;
+    else T = R_;
+
+    MatrixXd G = T * Z;
+    G.colwise() += c;
+
+    g = Map<VectorXd>(G.data(), 3 * n);
 }
 
 bool simulating = true;
@@ -71,13 +105,37 @@ bool simulating = true;
 void simulate() {
     int n = Xbar.rows() / 3;
 
-    for(int i = 0; ; i++) {
-        Matrix3d R;
-        Vector3d c;
-        goal_minimization(R, c, Xbar, x, m);
+    for(int t = 0; ; t++) {
 
-        MatrixXd G = R * Map<MatrixXd>(Xbar.data(), 3, n);
-        G.colwise() += c;
+        VectorXd f_def = VectorXd::Zero(x.size());
+
+        VectorXi N = VectorXi::Zero(n);
+        for (int i = 0; i < T.rows(); i++) {
+            for (int j = 0; j < 4; j++) N(T(i, j)) += 1;
+        }
+
+        for (int i = 0; i < T.rows(); i++) {
+            Matrix<double, 12, 1> XbarT;
+            Matrix<double, 12, 1> xT;
+            Vector4d mT;
+
+            for (int j = 0; j < 4; j++) {
+                XbarT.segment<3>(3 * j) = Xbar.segment<3>(3 * T(i, j));
+                xT.segment<3>(3 * j) = x.segment<3>(3 * T(i, j));
+                mT(j) = m(T(i, j));
+            }
+
+            VectorXd g;
+            goal_minimization(g, XbarT, xT, mT, false);
+
+            for (int j = 0; j < 4; j++) {
+                f_def.segment<3>(3 * T(i, j)) += alpha * (g - xT).segment<3>(3 * j) / N(T(i, j));
+            }
+        }
+
+        VectorXd g;
+        goal_minimization(g, Xbar, x, m, true);
+        f_def += 1e-2 * alpha * (g - x);
 
         VectorXd f_ext = VectorXd::Zero(x.size());
 
@@ -97,13 +155,12 @@ void simulate() {
             f_ext.segment<3>(3*Visualize::picked_vertices()[pickedi]) -= dV_mouse.segment<3>(3);
         }
 
-        // Add some friction
-        f_ext -= 1e2 * xdot;
+        f_ext -= 1e3 * xdot;
 
-        VectorXd g = Map<VectorXd>(G.data(), 3 * n);
-        VectorXd f_def = alpha * (g - x);
+        VectorXd v_ext(3 * n);
+        for (int i = 0; i < n; i++) v_ext.segment<3>(3 * i) = f_ext.segment<3>(3 * i) / m(i);
 
-        xdot += f_def / dt + dt * f_ext.cwiseQuotient(m);
+        xdot += f_def / dt + dt * v_ext;
         x += dt * xdot;
     }
 }
@@ -131,11 +188,10 @@ int main(int argc, char **argv) {
 
     flatten(Xbar, V);
 
-    m = VectorXd::Constant(3 * V.rows(), M_PI);
+    m = VectorXd::Constant(V.rows(), M_PI);
 
     Vector3d C;
     center_of_mass(C, Xbar, m);
-
     flatten(Xbar, V.rowwise() - C.transpose());
 
     flatten(x, V);
