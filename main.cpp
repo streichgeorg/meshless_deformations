@@ -209,7 +209,7 @@ void simulate() {
 
     cout << "center of mass: " << C.transpose() << endl;
 
-    for(int t = 0; ; t++) {
+    for (int t = 0; ; t++) {
         // set deformation force to zero 
         VectorXd f_def = VectorXd(3 * n, 1).setConstant(0);
 
@@ -224,10 +224,9 @@ void simulate() {
             for (size_t j = 0; j < N; j++) {
                 X_cluster.block<3, 1>(3 * j, 0) = Xbar.block<3, 1>(3 * clu(i, j), 0) + C;
                 x_cluster.block<3, 1>(3 * j, 0) = x.block<3, 1>(3 * clu(i, j), 0);
-                m_cluster(j) = m(clu(i,j)) / app(clu(i,j));
+                m_cluster(j) = m(clu(i, j)) / app(clu(i, j));
             }
 
-            
             // get center of mass of the cluster in the undeformed space C_cluster
             Vector3d C_cluster;
             center_of_mass(C_cluster, X_cluster, m_cluster);
@@ -246,35 +245,32 @@ void simulate() {
 
             // add deformation forces to every vertex j contained in the cluster i
             for (size_t j = 0; j < N; j++) {
-               f_def.block<3, 1>(3 * clu(i, j), 0) += 1 / app(clu(i, j)) * alpha * (g.block<3, 1>(3 * j, 0) - x_cluster.block<3, 1>(3 * j, 0));
+                f_def.block<3, 1>(3 * clu(i, j), 0) += 1 / app(clu(i, j)) * alpha * (g.block<3, 1>(3 * j, 0) - x_cluster.block<3, 1>(3 * j, 0));
             }
         }
-        
-        //cout << "finished all clusters" << endl;
-        // $$ WHY IS m.size() DIFFERENT FROM XBAR SIZE /3 ? 
 
         VectorXd f_ext = VectorXd::Zero(x.size());
 
-        for(unsigned int pickedi = 0; pickedi < Visualize::picked_vertices().size(); pickedi++) {
+        for (unsigned int pickedi = 0; pickedi < Visualize::picked_vertices().size(); pickedi++) {
             Vector3d mouse = x.segment<3>(3 * Visualize::picked_vertices()[pickedi]) +
-                    Visualize::mouse_drag_world() +
-                    Eigen::Vector3d::Constant(1e-6);
+                Visualize::mouse_drag_world() +
+                Eigen::Vector3d::Constant(1e-6);
 
             Vector6d dV_mouse;
             dV_spring_particle_particle_dq(
                 dV_mouse,
                 mouse,
-                x.segment<3>(3*Visualize::picked_vertices()[pickedi]), 0.0,
+                x.segment<3>(3 * Visualize::picked_vertices()[pickedi]), 0.0,
                 (Visualize::is_mouse_dragging() ? k_selected : 0.)
             );
 
-            f_ext.segment<3>(3*Visualize::picked_vertices()[pickedi]) -= dV_mouse.segment<3>(3);
+            f_ext.segment<3>(3 * Visualize::picked_vertices()[pickedi]) -= dV_mouse.segment<3>(3);
         }
 
         // Add some friction
         f_ext -= 1e2 * xdot;
 
-        xdot += f_def / dt + dt * f_ext.cwiseQuotient(m);
+        xdot += f_def / dt + dt * f_ext / M_PI; // change $$
         x += dt * xdot;
     }
 }
@@ -307,7 +303,7 @@ int main(int argc, char **argv) {
 
     flatten(Xbar, V);
 
-    m = VectorXd::Constant(3 * V.rows(), M_PI);
+    m = VectorXd::Constant(V.rows(), M_PI);
 
     center_of_mass(C, Xbar, m);
 
@@ -316,7 +312,7 @@ int main(int argc, char **argv) {
     flatten(x, V);
     xdot = VectorXd::Zero(x.size());
 
-    clusters(clu, app, Xbar, m, 8);
+    clusters(clu, app, Xbar, m, 3);
 
 
     std::thread simulation_thread(simulate);
