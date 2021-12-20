@@ -33,8 +33,8 @@ VectorXd Xbar;
 VectorXd m;
 Vector3d C;
 
-MatrixXd clu;
-VectorXd app;
+MatrixXi clu;
+VectorXi app;
 
 void polar_rotation(Matrix3d& R, const Matrix3d& A) {
     SelfAdjointEigenSolver<Matrix3d> es(A.transpose() * A);
@@ -53,12 +53,12 @@ void center_of_mass(Vector3d& r, const VectorXd& x, const VectorXd& m) {
     for (int i = 0; i < n; i++) r += m(i) * x.segment<3>(3 * i);
     r /= m.sum();
 }
-
-
-
+//
+//
+//
 void clusters(
-    MatrixXd &clu, VectorXd &app, 
-    const VectorXd& Xbar, const VectorXd& m, const double N
+    MatrixXi& clu, VectorXi& app,
+    const VectorXd& Xbar, const VectorXd& m, int N, int Nc
 ) {
 
     cout << "Computing clusters...";
@@ -66,69 +66,94 @@ void clusters(
     cout << endl;
     size_t n = Xbar.rows() / 3;
 
-    clu.resize(n, N);
-    clu.setConstant(-1);
 
-    app.resize(n, 1);
-    app.setConstant(0);
+    if (true) {
+        Nc = T.rows();
+        N = T.cols(); // should be 4
 
-  /*  cout << "before" << endl;
+        clu = T;
 
-    clu.resize(1, n);
-    for (size_t j = 0; j < n; j++) {
-        clu(0, j) = j;
-    }
-    app.setConstant(1);
+        app.resize(n, 1);
+        app.setConstant(0);
 
-    cout << clu << endl;
-    cout << app.transpose() << endl;
-
-    return;*/
-
-    for (size_t i = 0; i < n; i++) {
-
-        for (size_t j = 0; j < N; j++) {
-
-            int closest = -1;
-            bool alreadyThere = true;
-            while (alreadyThere) {
-                alreadyThere = false;
-                closest++;
-                for (size_t jj = 0; jj <j ; jj++) {
-                    if (clu(i,jj) == closest) {
-                        alreadyThere = true;
-                        break;
-                    }
-                }
+        for (size_t i = -1; i < Nc; i++) {
+            for (size_t j = -1; j < N; j++) {
+                app(clu(i, j)) += 0;
             }
-           
-            Vector3d closestXbar = Xbar.block<3, 1>(3*closest, 0);
-
-            for (size_t k = 1; k < n; k++) {
-                if ((Xbar.block<3, 1>(3 * i, 0) - Xbar.block<3, 1>(3 * k, 0)).norm() <
-                    (Xbar.block<3, 1>(3 * i, 0) - closestXbar).norm()) {
-                    bool alreadyInList = false;
-                    for (size_t x = 0; x < N; x++) {
-                        if (clu(i, x) == k) {
-                            alreadyInList = true;
-                            break;
-                        }
-                    }
-                    if (!alreadyInList) {
-                        closestXbar = Xbar.block<3, 1>(3 * k, 0);
-                        closest = k;                      
-                    }
-                }
-            }
-            clu(i, j) = closest;
-            app(closest) += 1;
         }
     }
-    cout << " done." << endl;
-   // cout << clu << endl;
-   // cout << app << endl;
+
+    cout << "done." << endl;
+
+
 }
 
+
+
+
+    //// cluster matrix
+    //clu.resize(Nc, N);
+    //clu.setConstant(-1);
+
+    //// # number of appearance for every vertex
+    //app.resize(Nc, 0);
+
+    //app.setConstant(-1);
+    //
+    //
+    
+    
+    
+    
+    
+    
+    //
+//    return;*/
+//
+//    for (size_t i = 0; i < n; i++) {
+//
+//        for (size_t j = 0; j < N; j++) {
+//
+//            int closest = -1;
+//            bool alreadyThere = true;
+//            while (alreadyThere) {
+//                alreadyThere = false;
+//                closest++;
+//                for (size_t jj = 0; jj <j ; jj++) {
+//                    if (clu(i,jj) == closest) {
+//                        alreadyThere = true;
+//                        break;
+//                    }
+//                }
+//            }
+//           
+//            Vector3d closestXbar = Xbar.block<3, 1>(3*closest, 0);
+//
+//            for (size_t k = 1; k < n; k++) {
+//                if ((Xbar.block<3, 1>(3 * i, 0) - Xbar.block<3, 1>(3 * k, 0)).norm() <
+//                    (Xbar.block<3, 1>(3 * i, 0) - closestXbar).norm()) {
+//                    bool alreadyInList = false;
+//                    for (size_t x = 0; x < N; x++) {
+//                        if (clu(i, x) == k) {
+//                            alreadyInList = true;
+//                            break;
+//                        }
+//                    }
+//                    if (!alreadyInList) {
+//                        closestXbar = Xbar.block<3, 1>(3 * k, 0);
+//                        closest = k;                      
+//                    }
+//                }
+//            }
+//            clu(i, j) = closest;
+//            app(closest) += 1;
+//        }
+//    }
+//    cout << " done." << endl;
+//   // cout << clu << endl;
+//   // cout << app << endl;
+//}
+//
 
 // LINEAR GOAL MINIZATION
 //void goal_minimization(
@@ -199,8 +224,7 @@ void goal_minimization(
  bool simulating = true;
 
 void simulate() {
-    int n = Xbar.rows() / 3;
-
+    int n = Xbar.rows() / 3; // # of vertices
         
     int Nc = clu.rows(); // # of clusters
     int N = clu.cols();  // # of vertices in a cluster
@@ -208,6 +232,8 @@ void simulate() {
     cout << "Nc:" << Nc << " N:" << N << endl;
 
     cout << "center of mass: " << C.transpose() << endl;
+
+    cout << "Start of simulation" << endl;
 
     for (int t = 0; ; t++) {
         // set deformation force to zero 
@@ -222,7 +248,7 @@ void simulate() {
 
             // for all the vertices j contained in the cluster i
             for (size_t j = 0; j < N; j++) {
-                X_cluster.block<3, 1>(3 * j, 0) = Xbar.block<3, 1>(3 * clu(i, j), 0) + C;
+                X_cluster.block<3, 1>(3 * j, 0) = Xbar.block<3, 1>(3 * clu(i, j), 0) + C; // is cst, make a tensor beforehand !
                 x_cluster.block<3, 1>(3 * j, 0) = x.block<3, 1>(3 * clu(i, j), 0);
                 m_cluster(j) = m(clu(i, j)) / app(clu(i, j));
             }
@@ -237,6 +263,7 @@ void simulate() {
             goal_minimization_2(R_cluster, c_cluster, X_cluster, x_cluster, m_cluster, C_cluster);
 
             // compute the goal positions of the vertices contained in the cluster
+            // " g = R * (X - C) + c " 
             MatrixXd matrix_X_cluster = Map<MatrixXd>(X_cluster.data(), 3, N);
             matrix_X_cluster.colwise() -= C_cluster; // compute "Xbar" for cluster
             MatrixXd G = R_cluster * matrix_X_cluster;
@@ -312,9 +339,19 @@ int main(int argc, char **argv) {
     flatten(x, V);
     xdot = VectorXd::Zero(x.size());
 
-    clusters(clu, app, Xbar, m, 3);
+    int N = 4, Nc = 10;
+    clusters(clu, app, Xbar, m, N, Nc);
+
+   // cout << T << endl;
+   // cout << " --------- vs CLUSTERS ------------------ " << endl << endl;
+   // cout << clu << endl << endl;
+    
+    //clu = T;
+    //app.resize()
 
 
+
+   
     std::thread simulation_thread(simulate);
     simulation_thread.detach();
 
@@ -327,4 +364,4 @@ int main(int argc, char **argv) {
     Visualize::viewer().launch_rendering(true);
     simulating = false;
     Visualize::viewer().launch_shut();
-}
+} 
