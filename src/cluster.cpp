@@ -91,25 +91,22 @@ std::vector<Cluster> clusters_from_file(
         std::cout << "Clusters has wrong format" << std::endl;
     }
 
-    n_clusters += 1;
-
-    std::vector<std::set<int>> cluster_vertices(n_clusters, std::set<int>());
+    std::vector<std::set<int>> cluster_vertices(n_clusters);
+    for (int i = 0; i < n_clusters; i++) cluster_vertices[i] = std::set<int>();
 
     for (int i = 0; i < V.rows(); i++) {
-        cluster_vertices[0].insert(i);
-        cluster_vertices[idx_to_cluster[i] + 1].insert(i);
+        cluster_vertices[idx_to_cluster[i]].insert(i);
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 1; i++) {
         for (int j = 0; j < n_clusters; j++) {
-            cluster_vertices[i] = grow_cluster(T, cluster_vertices[i]);
+            cluster_vertices[j] = grow_cluster(T, cluster_vertices[j]);
         }
     }
 
     std::vector<Cluster> clusters;
     for (int i = 0; i < n_clusters; i++) {
-        std::cout << cluster_vertices[i].size() << std::endl;
-        clusters.emplace_back(cluster_vertices[i], V, (i > 0) ? 1.0 : 0.0);
+        clusters.emplace_back(cluster_vertices[i], V, 1.0);
     }
 
     return clusters;
