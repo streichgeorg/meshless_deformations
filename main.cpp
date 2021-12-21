@@ -51,7 +51,7 @@ void simulate() {
             }
 
             VectorXd g;
-            goal_minimization(g, cluster.Z, cluster.B, cluster.m, x_cluster, false);
+            goal_minimization(g, cluster.Z, cluster.B, cluster.m, x_cluster, use_quadratic);
 
             for (int i = 0; i < cluster.vertices.size(); i++) {
                 VectorXd d = g - x_cluster;
@@ -78,7 +78,8 @@ void simulate() {
             f_ext.segment<3>(3*Visualize::picked_vertices()[pickedi]) -= dV_mouse.segment<3>(3);
         }
 
-        f_ext -= 1e2 * xdot;
+        // Add some friction to make the result a bit more realistic looking
+        f_ext -= s_friction * xdot;
 
         VectorXd v_ext(3 * n);
         for (int i = 0; i < n; i++) v_ext.segment<3>(3 * i) = f_ext.segment<3>(3 * i) / m(i);
@@ -110,7 +111,28 @@ int main(int argc, char **argv) {
     igl::boundary_facets(T, F);
     F = F.rowwise().reverse().eval();
 
-    clusters = clusters_from_file("../data/coarse_bunny.clusters", T, V);
+    std::string cluster_type = (argc == 1) ? "tetrahedron" : argv[1];
+
+    if (cluster_type == "single") {
+        alpha = 1e-4;
+        k_selected = 1e2;
+        beta = 0.3;
+        s_friction = 5;
+
+        clusters = single_cluster(V);
+    } else if (cluster_type == "coarse") {
+        alpha = 1e-4;
+        k_selected = 1e2;
+        beta = 0.3;
+        s_friction = 5;
+
+        clusters = clusters_from_file("../data/coarse_bunny.clusters", T, V);
+    } else {
+        alpha = 1e-1;
+        use_quadratic = false;
+
+        clusters = tetrahedron_clusters(T, V);
+    }
 
     m = VectorXd::Constant(V.rows(), M_PI);
 
