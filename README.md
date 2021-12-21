@@ -1,5 +1,4 @@
 # Final Project for CSC417
-Alain Schöbi, Georg Streich
 
 ## Hand-In
 The report and link to the video can be found on markus.
