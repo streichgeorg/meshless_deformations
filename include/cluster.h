@@ -16,7 +16,11 @@ struct Cluster {
     Eigen::MatrixXd Z;
     Eigen::Matrix<double, 9, 9> B;
 
-    Cluster(const std::set<int>& vertex_set, const Eigen::MatrixXd &V, double weight_);
+    Cluster(
+        const std::set<int>& vertex_set,
+        const Eigen::MatrixXd &V,
+        double _weight
+    );
 };
 
 std::vector<Cluster> clusters_from_file(
@@ -25,4 +29,5 @@ std::vector<Cluster> clusters_from_file(
     const Eigen::MatrixXd &V
 );
 
-std::vector<Cluster> single_cluster(const Eigen::MatrixXi &T, const Eigen::MatrixXd &V);
+std::vector<Cluster> single_cluster(const Eigen::MatrixXd &V);
+std::vector<Cluster> tetrahedron_clusters(const Eigen::MatrixXi &T, const Eigen::MatrixXd &V);

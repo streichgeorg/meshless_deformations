@@ -10,8 +10,8 @@ using namespace Eigen;
 Cluster::Cluster(
     const std::set<int>& vertex_set,
     const MatrixXd &V,
-    double weight_
-) : weight(weight_) {
+    double _weight
+) : weight(_weight) {
 
     std::copy(vertex_set.begin(), vertex_set.end(), std::back_inserter(vertices));
 
@@ -112,4 +112,21 @@ std::vector<Cluster> clusters_from_file(
     return clusters;
 }
 
+std::vector<Cluster> single_cluster(const MatrixXd &V) {
+    std::set<int> vertices;
+    for (int i = 0; i < V.rows(); i++) vertices.insert(i);
+    std::vector<Cluster> clusters = { Cluster(vertices, V, 1.0) };
+    return clusters;
+}
 
+std::vector<Cluster> tetrahedron_clusters(const MatrixXi &T, const MatrixXd &V) {
+    std::vector<Cluster> clusters;
+    for (int i = 0; i < T.rows(); i++) {
+        std::set<int> vertices;
+        for (int j = 0; j < 4; j++) {
+            vertices.insert(T(i, j));
+        }
+        clusters.emplace_back(vertices, V, 1.0);
+    }
+    return clusters;
+}
